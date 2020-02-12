@@ -3,7 +3,7 @@ library('ggplot2')
 
 
 # import snow survey data
-surveydir = "C:/Users/Cob/index/educational/usask/research/masters/data/snow_surveys/"
+surveydir = "C:/Users/Cob/index/educational/usask/research/masters/data/surveys/depth_swe/"
 infile = "marmot_snow_surveys_raw_19_045.csv"
 outfile = "19_045_depth_swe_coefficients.csv"
 survey <- read.csv(paste0(surveydir,infile), skip=1, header=TRUE, na.strings=c("NA",""))
@@ -14,6 +14,7 @@ dens <- survey %>%
 # calculate swe
 dens$swe_mm <- 10*(dens$swe_raw_cm - dens$swe_tare_cm)
 dens$density_kgpm3 <- 100*dens$swe_mm/dens$snow_depth_cm
+dens$snow_depth_m <- dens$snow_depth_cm/100
 # throw out data with quality flags
 dens <- dens %>%
   filter(!swe_quality_flag)
@@ -25,7 +26,9 @@ ggplot(dens, aes(snow_depth_cm, density_kgpm3)) +
   geom_point(aes(color=standardized_survey_notes))
 
 ggplot(dens, aes(snow_depth_cm, swe_mm)) + 
-  geom_point(aes(color=standardized_survey_notes))
+  geom_point(aes(color=standardized_survey_notes)) +
+  labs(title = "19_045 depth-SWE observations", xlab = "Snow Depth (cm)", ylab = "SWE (mm)", color = "Vegetation Type") +
+  xlim(0,120)
 
 # density analysis
 density_mean = group_by(dens, standardized_survey_notes) %>%
