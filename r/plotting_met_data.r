@@ -24,8 +24,8 @@ data_qc <- function(df) {
   # keep within start and end date
   start_date <- as.POSIXct("2019-02-01 12:55:00", format="%Y-%m-%d %H:%M:%OS",tz="MST")
   end_date <- as.POSIXct("2019-02-25 11:40:00", format="%Y-%m-%d %H:%M:%OS", tz="MST")
-  # start_date <- as.POSIXct("2019-02-19 12:40:00", format="%Y-%m-%d %H:%M:%OS",tz="MST")
-  # end_date <- as.POSIXct("2019-02-21 11:40:00", format="%Y-%m-%d %H:%M:%OS", tz="MST")
+  #start_date <- as.POSIXct("2019-02-14 12:40:00", format="%Y-%m-%d %H:%M:%OS",tz="MST")
+  #end_date <- as.POSIXct("2019-02-21 11:40:00", format="%Y-%m-%d %H:%M:%OS", tz="MST")
   # start_date <- as.POSIXct("2018-10-01 00:00:00", format="%Y-%m-%d %H:%M:%OS",tz="MST")
   # end_date <- as.POSIXct("2019-10-01 00:00:00", format="%Y-%m-%d %H:%M:%OS", tz="MST")
   df = df[(df$TIMESTAMP >= start_date) & (df$TIMESTAMP <= end_date),]
@@ -74,12 +74,26 @@ d_uchs = diff(ts_uchs)
 d_ufhs = diff(ts_ufhs)
 
 
+moving_average <- function(x, n = 5) {             # calculate moving average
+  stats::filter(x, rep(1 / n, n), sides = 2)
+}
+
+uc$Snow.Depth.smooth = moving_average(uc$Snow.Depth, n=13)
+uf$Snow.Depth.smooth = moving_average(uf$Snow.Depth, n=13)
+
+library("zoo")  
+
+uc$Snow.Depth.smooth <- rollmean(na.approx(uc$Snow.Depth), k = 11, fill=NA)
+uf$Snow.Depth.smooth <- rollmean(na.approx(uf$Snow.Depth), k = 11, fill=NA)
+
 # all precip
 ggplot() +
-  geom_line(data=uc, aes(x=TIMESTAMP, y=Cumulative.All.Precipitation - 4.342135, color='cPre (mm)')) +
-  geom_line(data=uc, aes(x=TIMESTAMP, y=(Snow.Depth - .566) * 100, color='uc dHS (cm)')) + 
-  geom_line(data=uf, aes(x=TIMESTAMP, y=(Snow.Depth - 0.328) * 100, color='uf dHS (cm)')) + 
-  geom_line(data=ls, aes(x=TIMESTAMP, y=(m1 - 28.990), color='dTree (kg)')) +
+  # geom_line(data=uc, aes(x=TIMESTAMP, y=Cumulative.All.Precipitation - 4.342135, color='cPre (mm)')) +
+  #geom_line(data=uc, aes(x=TIMESTAMP, y=(Snow.Depth - .566) * 100, color='uc dHS (cm)')) + 
+  #geom_line(data=uf, aes(x=TIMESTAMP, y=(Snow.Depth - 0.328) * 100, color='uf dHS (cm)')) + 
+  geom_line(data=uc, aes(x=TIMESTAMP, y=(Snow.Depth.smooth - .566) * 100, color='uc dHS smooth (cm)')) + 
+  geom_line(data=uf, aes(x=TIMESTAMP, y=(Snow.Depth.smooth - 0.328) * 100, color='uf dHS smooth (cm)')) +
+  # geom_line(data=ls, aes(x=TIMESTAMP, y=(m1 - 28.990), color='dTree (kg)')) +
   geom_vline(xintercept=s_045, linetype="dashed", size=1) +
   geom_vline(xintercept=s_050, linetype="dashed", size=1) +
   geom_vline(xintercept=s_052, linetype="dashed", size=1) +
@@ -170,11 +184,10 @@ ggplot(uct, aes(x=Wind.Direction_ut, y=Wind.Speed_ut * Incremental.All.Precipita
   coord_polar() +
   labs(title="Weighted wind rose for Upper Clearing Tower, Feb 14-19", x="Wind direction (deg)", y="Interval precip * Wind speed (mm * m/s)")
 
-t0 = n_050
-t1 = n_052
-data = uc
 
 new_snow_dens = function(t0, t1, data){
+  # assuming o compression of old snow
+  
   # subset data to range
   valid = (data$TIMESTAMP >= t0) & (data$TIMESTAMP <= t1) 
   vata = data[valid,]
@@ -216,6 +229,96 @@ new_snow_dens(n_050, n_052, uc)
 new_snow_dens(n_043, n_045, uf)
 new_snow_dens(n_045, n_050, uf)
 new_snow_dens(n_050, n_052, uf)
+
+t0 = n_045
+t1 = n_050
+data = uf
+hs_col = "Snow.Depth.smooth"
+hs_col = "Snow.Depth"
+
+new_snow_dens = function(t0, t1, data, hs_col="Snow.Depth", old_snow_compression=FALSE){
+  # assuming linear compression of old snow
+  
+  # calculate rate of old snow compression
+  hindstep = 24
+  
+  # subset data to range
+  valid = (data$TIMESTAMP >= t0) & (data$TIMESTAMP <= t1) 
+  vata = data[valid,]
+  
+  # find snow depth accumulation interval
+  hs_min = min(vata[,hs_col], na.rm=TRUE)
+  hs_max = max(vata[,hs_col], na.rm=TRUE)
+  t_min = max(vata$TIMESTAMP[vata[,hs_col] == hs_min], na.rm=TRUE)
+  t_max = min(vata$TIMESTAMP[vata[,hs_col]== hs_max], na.rm=TRUE)
+  
+  # find snow depth compression interval
+  t_obs = tail(vata$TIMESTAMP, n=1)
+  hs_obs = tail(vata[,hs_col], n=1)
+  
+  # compression rate
+  dhs = (hs_min - hs_m1) / as.numeric(difftime(t_min, t_m1, units="hours"))  #units of meters/hour old snow compression
+  
+  
+  hs_m_max = hs_min + dhs * as.numeric(difftime(t_max, t_min, units="hours"))
+  hs_m_obs = hs_min + dhs * as.numeric(difftime(t_obs, t_min, units="hours"))
+
+
+  # mean air temp over accumulation interval
+  acc = (vata$TIMESTAMP >= t_min) & (vata$TIMESTAMP <= t_max)
+  Ta = mean(vata$Air.Temperature[acc], na.rm=TRUE)
+  
+  # model fresh snow density from Hedstrom and Pomeroy 1998
+  hpd = 67.92 + 51.25 * exp(Ta/2.59)
+  
+  
+  if(old_snow_compression){
+    # with old snow compression
+    
+    # find slope of old snow compression
+    m0 = which(data$TIMESTAMP == t_min) - hindstep
+    t_m0 = data$TIMESTAMP[m0]
+    hs_m0 = data[m0, hs_col]
+    
+    nsd = hpd * (hs_max - hs_m_max) / (hs_obs - hs_m_obs)
+    storm_swe = hpd * (hs_max - hs_m_max)
+  }else{
+    # no old snow compression
+    nsd = hpd * (hs_max - hs_min) / (hs_obs - hs_min)
+    storm_swe = hpd * (hs_max - hs_min)
+  }
+
+  
+  c(nsd, storm_swe, hpd, Ta)
+}
+
+
+new_snow_dens(n_045, n_050, uc, hs_col="Snow.Depth")
+new_snow_dens(n_050, n_052, uc, hs_col="Snow.Depth")
+
+new_snow_dens(n_045, n_050, uc, hs_col="Snow.Depth.smooth")
+new_snow_dens(n_050, n_052, uc, hs_col="Snow.Depth.smooth")
+
+new_snow_dens(n_045, n_050, uc, hs_col="Snow.Depth", old_snow_compression=TRUE)
+new_snow_dens(n_050, n_052, uc, hs_col="Snow.Depth", old_snow_compression=TRUE)
+
+new_snow_dens(n_045, n_050, uc, hs_col="Snow.Depth.smooth", old_snow_compression=TRUE)
+new_snow_dens(n_050, n_052, uc, hs_col="Snow.Depth.smooth", old_snow_compression=TRUE)
+
+
+
+new_snow_dens(n_045, n_050, uf, hs_col="Snow.Depth")
+new_snow_dens(n_050, n_052, uf, hs_col="Snow.Depth")
+
+new_snow_dens(n_045, n_050, uf, hs_col="Snow.Depth.smooth")
+new_snow_dens(n_050, n_052, uf, hs_col="Snow.Depth.smooth")
+
+new_snow_dens(n_045, n_050, uf, hs_col="Snow.Depth", old_snow_compression=TRUE)
+new_snow_dens(n_050, n_052, uf, hs_col="Snow.Depth", old_snow_compression=TRUE)
+
+new_snow_dens(n_045, n_050, uf, hs_col="Snow.Depth.smooth", old_snow_compression=TRUE)
+new_snow_dens(n_050, n_052, uf, hs_col="Snow.Depth.smooth", old_snow_compression=TRUE)
+
 
 # 
 # ggplot() +
