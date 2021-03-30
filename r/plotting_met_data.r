@@ -22,7 +22,7 @@ data_qc <- function(df) {
   # conver datetime to posix
   df$TIMESTAMP <- as.POSIXct(df$TIMESTAMP, format="%Y-%m-%d %H:%M:%OS", tz="MST")
   # keep within start and end date
-  start_date <- as.POSIXct("2019-02-01 12:55:00", format="%Y-%m-%d %H:%M:%OS",tz="MST")
+  start_date <- as.POSIXct("2019-02-10 12:55:00", format="%Y-%m-%d %H:%M:%OS",tz="MST")
   end_date <- as.POSIXct("2019-02-25 11:40:00", format="%Y-%m-%d %H:%M:%OS", tz="MST")
   #start_date <- as.POSIXct("2019-02-14 12:40:00", format="%Y-%m-%d %H:%M:%OS",tz="MST")
   #end_date <- as.POSIXct("2019-02-21 11:40:00", format="%Y-%m-%d %H:%M:%OS", tz="MST")
@@ -88,12 +88,13 @@ uf$Snow.Depth.smooth <- rollmean(na.approx(uf$Snow.Depth), k = 11, fill=NA)
 
 # all precip
 ggplot() +
-  # geom_line(data=uc, aes(x=TIMESTAMP, y=Cumulative.All.Precipitation - 4.342135, color='cPre (mm)')) +
-  #geom_line(data=uc, aes(x=TIMESTAMP, y=(Snow.Depth - .566) * 100, color='uc dHS (cm)')) + 
-  #geom_line(data=uf, aes(x=TIMESTAMP, y=(Snow.Depth - 0.328) * 100, color='uf dHS (cm)')) + 
+  geom_line(data=uc, aes(x=TIMESTAMP, y=Cumulative.All.Precipitation - 4.342135, color='cPre (mm)')) +
+  # geom_line(data=uc, aes(x=TIMESTAMP, y=(Snow.Depth - .566) * 100, color='uc dHS (cm)')) + 
+  # geom_line(data=uf, aes(x=TIMESTAMP, y=(Snow.Depth - 0.328) * 100, color='uf dHS (cm)')) + 
   geom_line(data=uc, aes(x=TIMESTAMP, y=(Snow.Depth.smooth - .566) * 100, color='uc dHS smooth (cm)')) + 
   geom_line(data=uf, aes(x=TIMESTAMP, y=(Snow.Depth.smooth - 0.328) * 100, color='uf dHS smooth (cm)')) +
-  # geom_line(data=ls, aes(x=TIMESTAMP, y=(m1 - 28.990), color='dTree (kg)')) +
+  geom_line(data=ls, aes(x=TIMESTAMP, y=(m1 - 28.990), color='dTree (kg)')) +
+  scale_color_manual(labels = c("Cum. precip (mm)", "Tree lysimeter (kg)", "Clearing snow depth (cm)", "Forest snow depth (cm)"), values = c("red", "forestgreen", "blue", "purple")) +  # Modify labels and colors
   geom_vline(xintercept=s_045, linetype="dashed", size=1) +
   geom_vline(xintercept=s_050, linetype="dashed", size=1) +
   geom_vline(xintercept=s_052, linetype="dashed", size=1) +
