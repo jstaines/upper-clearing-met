@@ -1,7 +1,7 @@
 library('dplyr')
 library('tidyr')
 library('ggplot2')
-source(file="C:/Users/Cob/index/educational/usask/research/masters/repos/upper-clearing-met/r/windrose.r")
+# source(file="C:/Users/Cob/index/educational/usask/research/masters/repos/upper-clearing-met/r/windrose.r")
 
 uc_in = "C:/Users/Cob/index/educational/usask/research/masters/data/met/2016_19_QC_data_merge/Upper_Clearing_15min_2016_19_slim_merge.txt"
 uc_raw = read.csv(uc_in, header=TRUE, na.strings=c(-9999, 'NA'), sep=",", skip=1)
@@ -22,8 +22,10 @@ data_qc <- function(df) {
   # conver datetime to posix
   df$TIMESTAMP <- as.POSIXct(df$TIMESTAMP, format="%Y-%m-%d %H:%M:%OS", tz="MST")
   # keep within start and end date
-  start_date <- as.POSIXct("2019-02-10 12:55:00", format="%Y-%m-%d %H:%M:%OS",tz="MST")
-  end_date <- as.POSIXct("2019-02-25 11:40:00", format="%Y-%m-%d %H:%M:%OS", tz="MST")
+  # start_date <- as.POSIXct("2019-02-10 12:55:00", format="%Y-%m-%d %H:%M:%OS",tz="MST")
+  # end_date <- as.POSIXct("2019-02-25 11:40:00", format="%Y-%m-%d %H:%M:%OS", tz="MST")
+  start_date <- as.POSIXct("2019-02-19 12:00:00", format="%Y-%m-%d %H:%M:%OS",tz="MST")
+  end_date <- as.POSIXct("2019-02-21 12:00:00", format="%Y-%m-%d %H:%M:%OS", tz="MST")
   #start_date <- as.POSIXct("2019-02-14 12:40:00", format="%Y-%m-%d %H:%M:%OS",tz="MST")
   #end_date <- as.POSIXct("2019-02-21 11:40:00", format="%Y-%m-%d %H:%M:%OS", tz="MST")
   # start_date <- as.POSIXct("2018-10-01 00:00:00", format="%Y-%m-%d %H:%M:%OS",tz="MST")
@@ -441,3 +443,6 @@ new_snow_dens(n_050, n_052, uf, hs_col="Snow.Depth.smooth", old_snow_compression
 # 
 # # snow density analysis
 # (uc$Cumulative.All.Precipitation[uc$TIMESTAMP == n_050] - uc$Cumulative.All.Precipitation[uc$TIMESTAMP == n_045]) / (uc$Snow.Depth[uc$TIMESTAMP == n_050] - uc$Snow.Depth[uc$TIMESTAMP == n_045])
+
+# wind rose
+windRose(ut, ws = 'Wind.Speed', wd = 'Wind.Direction', paddle = F, border = T)
